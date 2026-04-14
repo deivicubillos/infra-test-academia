@@ -90,7 +90,7 @@ Se estandarizaron los nombres de servicio a `backend`, se corrigió el `proxy_pa
 
 Para ver el paso a paso detallado, comandos ejecutados y capturas de pantalla de todo el proceso de configuración en Debian 12, consulte el siguiente documento:
 
-👉 **[Descargar Reporte Técnico Completo (PDF)](./docs/Entregable_Analisis_Infraestructura.pdf)**
+👉 **[Descargar Reporte Técnico Completo (PDF)](./docs/Reporte Tecnico Completo.pdf)**
 
 **Candidato:** Deivi Cubillos  
 **Stack:** Debian 12, Docker Swarm, Traefik, Flask, GitHub Actions.
