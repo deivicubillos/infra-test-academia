@@ -1,0 +1,104 @@
+#version: '3.8'
+
+#services:
+##  web:
+#  backend:
+#    build: ./app
+#    container_name: app
+#    environment:
+##      - ENVIRONMENT=production
+#      - ENV=production
+#    expose:
+#      - "5000"
+## Healthcheck
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#      start_period: 10s
+## Logs Claros
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "10m"  # El archivo de log no pasará de 10MB
+#        max-file: "3"    # Solo guardará los últimos 3 archivos
+
+#  nginx:
+#    image: nginx:latest
+#    container_name: proxy
+#    ports:
+#      - "8080:80"
+#    volumes:
+#      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+#      - ./logs/nginx:/var/log/nginx
+#    depends_on:
+#      - backend
+## Logs Claros
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "10m"  # El archivo de log no pasará de 10MB
+#        max-file: "3"    # Solo guardará los últimos 3 archivos
+
+
+version: '3.8'
+
+services:
+  # REEMPLAZO DE NGINX POR TRAEFIK
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--api.insecure=true"        # Panel de control
+      - "--providers.docker=true"    # Escuchar a Docker
+      - "--providers.docker.swarmMode=true" # Modo Swarm activado
+      - "--entrypoints.web.address=:80"     # Puerto de entrada
+    ports:
+      - "80:80"       # Tráfico público (Sustituye al 8080)
+      - "8080:8080"   # Dashboard de Traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # El "oído" de Traefik
+    networks:
+      - academia-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      labels:
+        - "traefik.enable=false" # NUEVO: Esto evita el error "port is missing"
+
+  # TU APP FLASK (AHORA COMO SERVICIO ESCALABLE)
+  backend:
+    image: my-flask-app:latest
+    build: ./app
+    environment:
+      - ENV=production
+    networks:
+      - academia-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # CONFIGURACIÓN ESPECÍFICA DE SWARM (REEMPLAZA A CONTAINER_NAME Y DEPENDS_ON)
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.backend.rule=Host(`localhost`) || Host(`127.0.0.1`)"
+        - "traefik.http.services.backend.loadbalancer.server.port=5000"
+        - "traefik.docker.network=mi-academia_academia-net" # NUEVO: Indica la red exacta
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# DEFINICIÓN DE LA RED OVERLAY
+networks:
+  academia-net:
+    driver: overlay
